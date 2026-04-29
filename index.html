@@ -586,8 +586,10 @@ let teams     = [];
 let cmpList   = [];
 let allyT     = [null,null,null];
 let oppT      = [null,null,null];
-let pickList  = [];
-let notes     = {};
+let pickList      = [];
+let allianceData  = {}; // { teamNum: {picked, declined, alliance:1-8, pickPos:'captain'|'1'|'2'} }
+let pickListTs    = 0;
+let notes         = {};
 let schedData = [];
 let rankData  = [];
 let sortF     = 'epa_mean';
@@ -1003,10 +1005,49 @@ function filterSchedule() {
 }
 
 // ─── PICK LIST ────────────────────────────────────────────────
+function plBase() { return syncBase()?.replace('/pits','/picklist') || null; }
+
+async function syncPushPickList() {
+  const base=plBase(); if(!base) return;
+  pickListTs=Date.now();
+  try {
+    await fetch(`${base}.json`,{
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({list:pickList, alliance:allianceData, _ts:pickListTs})
+    });
+  } catch(e){}
+}
+
+async function syncPullPickList() {
+  const base=plBase(); if(!base) return;
+  try {
+    const r=await fetch(`${base}.json`);
+    if(!r.ok) return;
+    const d=await r.json();
+    if(!d||typeof d!=='object') return;
+    if((d._ts||0) > pickListTs) {
+      pickList    = d.list    || [];
+      allianceData= d.alliance|| {};
+      pickListTs  = d._ts     || 0;
+      renderPickList(); renderTeams(); renderSummary();
+    }
+  } catch(e){}
+}
+
+function setAllianceStatus(num, field, val) {
+  if(!allianceData[num]) allianceData[num]={};
+  allianceData[num][field]=val;
+  if(field==='picked'&&val) { allianceData[num].declined=false; }
+  if(field==='declined'&&val) { allianceData[num].picked=false; }
+  syncPushPickList();
+  renderPickList();
+}
+
 function togglePick(num) {
   const i = pickList.indexOf(num);
-  if(i>=0) pickList.splice(i,1);
+  if(i>=0) { pickList.splice(i,1); delete allianceData[num]; }
   else pickList.push(num);
+  syncPushPickList();
   renderPickList(); renderTeams(); renderSummary();
 }
 
@@ -1014,10 +1055,16 @@ function movePick(idx, dir) {
   const ni = idx+dir;
   if(ni<0||ni>=pickList.length) return;
   [pickList[idx],pickList[ni]]=[pickList[ni],pickList[idx]];
+  syncPushPickList();
   renderPickList();
 }
 
-function clearPickList() { pickList=[]; renderPickList(); renderTeams(); renderSummary(); }
+function clearPickList() {
+  if(!confirm('Clear the entire pick list and all alliance assignments?')) return;
+  pickList=[]; allianceData={};
+  syncPushPickList();
+  renderPickList(); renderTeams(); renderSummary();
+}
 
 function copyPickList() {
   const txt = pickList.map((n,i)=>{
@@ -1029,23 +1076,93 @@ function copyPickList() {
 
 function renderPickList() {
   const wrap = document.getElementById('picklist-wrap');
-  if(!pickList.length) { wrap.innerHTML=`<div class="empty">No teams in your pick list yet.<br>Use the "+Pick" button on team rows.</div>`; return; }
+  document.querySelector('[data-tab="picklist"]').textContent=`Pick List (${pickList.length})`;
+
+  // ── Alliance grid ────────────────────────────────────────────
+  const POSITIONS = ['Captain','1st Pick','2nd Pick'];
+  const gridRows = Array.from({length:8},(_,ai)=>{
+    const allianceNum = ai+1;
+    const slots = POSITIONS.map(pos=>{
+      const posKey = pos==='Captain'?'captain':pos==='1st Pick'?'1':'2';
+      const picked = Object.entries(allianceData).find(([,v])=>v.picked&&v.alliance===allianceNum&&v.pickPos===posKey);
+      if(picked) {
+        const [pNum] = picked;
+        const pt=teams.find(x=>x.team===parseInt(pNum));
+        return `<td style="padding:5px 10px;border:1px solid var(--s3);background:rgba(63,185,80,.08);">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--green)">${pNum}</span>
+          <span style="font-size:10px;color:var(--tx3);margin-left:4px;">${esc((pt?.name||'').substring(0,14))}</span>
+        </td>`;
+      }
+      return `<td style="padding:5px 10px;border:1px solid var(--s3);color:var(--tx3);font-size:11px;">—</td>`;
+    }).join('');
+    return `<tr>
+      <td style="padding:5px 10px;border:1px solid var(--s3);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue);background:var(--s2);">A${allianceNum}</td>
+      ${gridRows}
+    </tr>`.replace('${gridRows}',gridRows);
+  }).join('');
+
+  const allianceGridHtml = `
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;">Alliance Selection Board</div>
+      <div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;">
+        <thead><tr>
+          <th style="padding:5px 10px;border:1px solid var(--bd);background:var(--s1);color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;">Alliance</th>
+          ${POSITIONS.map(p=>`<th style="padding:5px 10px;border:1px solid var(--bd);background:var(--s1);color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;">${p}</th>`).join('')}
+        </tr></thead>
+        <tbody>${gridRows}</tbody>
+      </table></div>
+    </div>`;
+
+  if(!pickList.length) {
+    wrap.innerHTML=`${allianceGridHtml}<div class="empty">No teams in your pick list yet. Use the "+Pick" button on team rows.</div>`;
+    return;
+  }
+
   const myRobot = myTeam ? teams.find(t=>t.team===myTeam) : null;
-  wrap.innerHTML = pickList.map((num,i)=>{
-    const t=teams.find(x=>x.team===num)||{team:num,name:`Team ${num}`,epa_mean:0,endgame_epa:0,auto_epa:0,teleop_epa:0};
-    const cl=climbLabel(t.endgame_epa);
-    const flags=(teamFlags[num]||[]).map(k=>{ const fd=FLAG_DEFS.find(f=>f.k===k); return fd?`<span class="flag-tag ${fd.cls}">${fd.txt}</span>`:'' }).join('');
+
+  const items = pickList.map((num,i)=>{
+    const t    = teams.find(x=>x.team===num)||{team:num,name:`Team ${num}`,epa_mean:0,endgame_epa:0,auto_epa:0,teleop_epa:0};
+    const cl   = climbLabel(t.endgame_epa);
+    const flags= (teamFlags[num]||[]).map(k=>{ const fd=FLAG_DEFS.find(f=>f.k===k); return fd?`<span class="flag-tag ${fd.cls}">${fd.txt}</span>`:'' }).join('');
+    const ad   = allianceData[num]||{};
+    const isPicked   = !!ad.picked;
+    const isDeclined = !!ad.declined;
+
+    let statusBadge='';
+    if(isPicked)   statusBadge=`<span class="tag tg" style="font-size:10px;">A${ad.alliance} · ${ad.pickPos==='captain'?'Captain':ad.pickPos==='1'?'1st Pick':'2nd Pick'}</span>`;
+    if(isDeclined) statusBadge=`<span class="tag ty" style="font-size:10px;">Declined</span>`;
+
     let comboHtml='';
     if(myRobot&&myRobot.team!==num) {
       const combo=myRobot.epa_mean+t.epa_mean;
       comboHtml=`<span style="font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;">+you = <span style="color:var(--blue)">${f1(combo)}</span></span>`;
     }
-    return `<div class="pick-item">
-      <span class="pick-idx">${i+1}</span>
+
+    const allianceControls = isPicked ? `
+      <div style="display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap;">
+        <select class="inp" style="padding:3px 7px;font-size:11px;width:auto;" onchange="setAllianceStatus(${num},'alliance',parseInt(this.value))">
+          ${Array.from({length:8},(_,k)=>`<option value="${k+1}"${ad.alliance===k+1?' selected':''}>Alliance ${k+1}</option>`).join('')}
+        </select>
+        <select class="inp" style="padding:3px 7px;font-size:11px;width:auto;" onchange="setAllianceStatus(${num},'pickPos',this.value)">
+          <option value="captain"${ad.pickPos==='captain'?' selected':''}>Captain</option>
+          <option value="1"${ad.pickPos==='1'?' selected':''}>1st Pick</option>
+          <option value="2"${ad.pickPos==='2'?' selected':''}>2nd Pick</option>
+        </select>
+        <button class="btn sm" onclick="setAllianceStatus(${num},'picked',false)">Undo</button>
+      </div>` : '';
+
+    const rowStyle = isPicked ? 'opacity:.55;' : isDeclined ? 'opacity:.45;' : '';
+
+    return `<div class="pick-item" style="${rowStyle}">
+      <span class="pick-idx" style="color:${isPicked?'var(--green)':isDeclined?'var(--ylw)':'var(--tx3)'}">${i+1}</span>
       <span class="pick-num">${t.team}</span>
       <div style="flex:1;min-width:0;">
-        <div class="pick-name">${esc(t.name)}</div>
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <span class="pick-name">${esc(t.name)}</span>
+          ${statusBadge}
+        </div>
         ${flags?`<div class="flag-wrap" style="margin-top:3px;">${flags}</div>`:''}
+        ${allianceControls}
       </div>
       <span class="pick-climb">${tagHtml(cl.txt,cl.cls)}</span>
       <div style="text-align:right;min-width:90px;">
@@ -1056,11 +1173,17 @@ function renderPickList() {
         <button class="btn sm" onclick="movePick(${i},-1)" ${i===0?'disabled':''}>Up</button>
         <button class="btn sm" onclick="movePick(${i},1)"  ${i===pickList.length-1?'disabled':''}>Down</button>
         <button class="btn sm" onclick="openDetail(${t.team})">Detail</button>
+        ${!isPicked&&!isDeclined?`
+          <button class="btn sm" style="background:#132219;border-color:var(--green);color:var(--green);" onclick="setAllianceStatus(${num},'picked',true);setAllianceStatus(${num},'alliance',1);setAllianceStatus(${num},'pickPos','1')">✓ Picked</button>
+          <button class="btn sm" onclick="setAllianceStatus(${num},'declined',true)">Declined</button>
+        `:isPicked?'':
+          `<button class="btn sm" onclick="setAllianceStatus(${num},'declined',false)">Undo</button>`}
         <button class="btn sm danger" onclick="togglePick(${t.team})">Remove</button>
       </div>
     </div>`;
   }).join('');
-  document.querySelector('[data-tab="picklist"]').textContent=`Pick List (${pickList.length})`;
+
+  wrap.innerHTML = `${allianceGridHtml}${items}`;
 }
 
 // ─── TEAM DETAIL ──────────────────────────────────────────────
@@ -1495,6 +1618,7 @@ async function syncPull(manual=false) {
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const remote=await r.json();
     if(remote && typeof remote==='object') mergeRemote(remote);
+    syncPullPickList();
     setSyncBadge('ok');
     const msg=document.getElementById('sync-status-msg');
     if(msg) msg.textContent=`Last synced: ${new Date().toLocaleTimeString()}`;
