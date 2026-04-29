@@ -333,6 +333,22 @@
     .ps-summary { margin-top:18px; overflow-x:auto; }
     @media(max-width:900px) { .ps-layout { grid-template-columns:1fr; } .ps-grid { grid-template-columns:1fr 1fr; } }
 
+    /* Robot photos */
+    .photo-drop { border:2px dashed var(--bd); border-radius:8px; padding:28px 20px; text-align:center; cursor:pointer; transition:border-color .1s; }
+    .photo-drop:hover { border-color:var(--blue); }
+    .photo-drop-inner { font-size:13px; color:var(--tx3); line-height:2; }
+    .photo-preview { position:relative; display:block; }
+    .photo-preview img { width:100%; border-radius:6px; border:1px solid var(--bd); display:block; }
+    .photo-actions { display:flex; gap:6px; margin-top:8px; }
+    .photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+    .photo-card { background:var(--s1); border:1px solid var(--bd); border-radius:6px; overflow:hidden; cursor:pointer; transition:border-color .1s; }
+    .photo-card:hover { border-color:var(--blue); }
+    .photo-card img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+    .photo-card-ph { width:100%; aspect-ratio:4/3; background:var(--s2); display:flex; align-items:center; justify-content:center; color:var(--bd2); font-size:28px; }
+    .photo-card-info { padding:8px 10px; }
+    .photo-card-num { font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; color:var(--blue); }
+    .photo-card-name { font-size:11px; color:var(--tx3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
     @media(max-width:768px) {
       .ab-grid,.gr { grid-template-columns:1fr; }
       .summary-strip { grid-template-columns:repeat(2,1fr); }
@@ -363,6 +379,7 @@
   <button class="nb" data-tab="strategy">Match Strategy</button>
   <button class="nb" data-tab="videos">Videos</button>
   <button class="nb" data-tab="pitscout">Pit Scout</button>
+  <button class="nb" data-tab="photos">Photos</button>
   <button class="nb" data-tab="setup">Setup</button>
 </nav>
 
@@ -481,6 +498,15 @@
       <div id="ps-form-wrap"><div class="empty" style="padding:60px;">Select a team from the list.</div></div>
     </div>
     <div id="ps-summary-wrap"></div>
+  </div>
+
+  <!-- PHOTOS -->
+  <div id="tab-photos" class="tab">
+    <div class="tb">
+      <span style="color:var(--tx3);font-size:12px;">Robot photos from pit scouting. Click a card to open that team's pit scout form.</span>
+      <button class="btn" onclick="renderPhotosTab()" style="margin-left:auto;">Refresh</button>
+    </div>
+    <div id="photos-wrap"><div class="empty">No robot photos yet. Open a team in Pit Scout and tap the photo section to add one.</div></div>
   </div>
 
   <!-- SETUP -->
@@ -1424,8 +1450,9 @@ const PIT_CHECKS = [
 ];
 
 let pitScout      = {};
-let syncUrl       = '';
-let syncRoom      = '';
+let photoCache    = {};
+let syncUrl       = 'https://pit-scouting-johnson-division-default-rtdb.firebaseio.com';
+let syncRoom      = 'johnson 2026';
 let syncActive    = false;
 let syncTimer     = null;
 let activePitTeam = null;
@@ -1551,6 +1578,132 @@ function disableSync() {
   if(msg){msg.textContent='Sync disabled.';msg.style.color='var(--tx3)';}
 }
 
+// ─── PHOTOS ───────────────────────────────────────────────────
+function photoBase() {
+  const b=syncBase(); return b ? b.replace('/pits','/photos') : null;
+}
+
+function compressPhoto(file, cb) {
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const maxW=900, maxH=900;
+      const scale=Math.min(1, maxW/img.width, maxH/img.height);
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.7));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handlePitPhoto(num, input) {
+  const file=input.files[0]; if(!file) return;
+  compressPhoto(file, dataUrl=>{
+    photoCache[num]=dataUrl;
+    if(!pitScout[num]) pitScout[num]={};
+    pitScout[num]._photo=dataUrl;
+    trySavePit();
+    syncPushPhoto(num, dataUrl);
+    const el=document.getElementById(`pit-photo-${num}`);
+    if(el) el.innerHTML=photoSectionHtml(num, dataUrl);
+    renderPhotosTab();
+  });
+}
+
+function clearPitPhoto(num) {
+  if(!confirm('Remove this photo?')) return;
+  photoCache[num]=null;
+  if(pitScout[num]) { delete pitScout[num]._photo; trySavePit(); }
+  syncDeletePhoto(num);
+  const el=document.getElementById(`pit-photo-${num}`);
+  if(el) el.innerHTML=photoSectionHtml(num, null);
+  renderPhotosTab();
+}
+
+async function syncPushPhoto(num, dataUrl) {
+  const base=photoBase(); if(!base) return;
+  try {
+    await fetch(`${base}/${num}.json`,{
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({data:dataUrl,_ts:Date.now()})
+    });
+  } catch(e){}
+}
+
+async function syncDeletePhoto(num) {
+  const base=photoBase(); if(!base) return;
+  try { await fetch(`${base}/${num}.json`,{method:'DELETE'}); } catch(e){}
+}
+
+async function syncPullPhoto(num) {
+  if(photoCache[num]!==undefined) return photoCache[num];
+  const base=photoBase(); if(!base) return null;
+  try {
+    const r=await fetch(`${base}/${num}.json`);
+    if(!r.ok) return null;
+    const d=await r.json();
+    const url=d?.data||null;
+    photoCache[num]=url;
+    if(url && pitScout[num]) { pitScout[num]._photo=url; trySavePit(); }
+    return url;
+  } catch(e){ return null; }
+}
+
+function photoSectionHtml(num, dataUrl) {
+  if(dataUrl) {
+    return `<div class="photo-preview">
+      <img src="${dataUrl}" alt="Robot ${num}">
+      <div class="photo-actions">
+        <label class="btn sm" style="cursor:pointer;">
+          Retake / Replace
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePitPhoto(${num},this)">
+        </label>
+        <button class="btn sm danger" onclick="clearPitPhoto(${num})">Remove</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="photo-drop" onclick="document.getElementById('photo-inp-${num}').click()">
+    <div class="photo-drop-inner">
+      <div style="font-size:32px;margin-bottom:4px;">📷</div>
+      <div style="color:var(--tx2);font-weight:500;">Tap to photograph robot</div>
+      <div style="font-size:11px;margin-top:2px;">or choose from photo library</div>
+    </div>
+    <input id="photo-inp-${num}" type="file" accept="image/*" capture="environment" style="display:none" onchange="handlePitPhoto(${num},this)">
+  </div>`;
+}
+
+function renderPhotosTab() {
+  const wrap=document.getElementById('photos-wrap'); if(!wrap) return;
+  const allTeams=[...teams].sort((a,b)=>a.team-b.team);
+  const withPhotos=allTeams.filter(t=>pitScout[t.team]?._photo || photoCache[t.team]);
+  const without=allTeams.filter(t=>!pitScout[t.team]?._photo && !photoCache[t.team]);
+  const makeCard=t=>{
+    const photo=pitScout[t.team]?._photo || photoCache[t.team];
+    return `<div class="photo-card" onclick="document.querySelector('[data-tab=\\'pitscout\\']').click();setTimeout(()=>openPitTeam(${t.team}),50)">
+      ${photo ? `<img src="${photo}" alt="${t.team}" loading="lazy">` : `<div class="photo-card-ph">?</div>`}
+      <div class="photo-card-info">
+        <div class="photo-card-num">${t.team}</div>
+        <div class="photo-card-name">${esc(t.name||'')}</div>
+      </div>
+    </div>`;
+  };
+  if(!withPhotos.length && !teams.length) {
+    wrap.innerHTML=`<div class="empty">No robot photos yet. Open a team in Pit Scout and tap the photo section.</div>`;
+    return;
+  }
+  wrap.innerHTML=`
+    ${withPhotos.length?`<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:10px;">${withPhotos.length} robot${withPhotos.length>1?'s':''} photographed</div>
+    <div class="photo-grid" style="margin-bottom:24px;">${withPhotos.map(makeCard).join('')}</div>`:''}
+    ${without.length?`<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:10px;">Not yet photographed (${without.length})</div>
+    <div class="photo-grid">${without.map(makeCard).join('')}</div>`:''}
+  `;
+}
+
 function renderPitList() {
   const q=(document.getElementById('ps-search')?.value||'').toLowerCase();
   const list=document.getElementById('ps-list'); if(!list) return;
@@ -1605,6 +1758,12 @@ function openPitTeam(num) {
     </div>`;
   };
 
+  const existingPhoto = pitScout[num]?._photo || photoCache[num] || null;
+  // Also pull photo from sync if not cached
+  if(!existingPhoto && syncActive) syncPullPhoto(num).then(url=>{
+    if(url){ const el=document.getElementById(`pit-photo-${num}`); if(el) el.innerHTML=photoSectionHtml(num,url); renderPhotosTab(); }
+  });
+
   wrap.innerHTML=`<div class="ps-form">
     <div class="ps-fh">
       <div>
@@ -1616,6 +1775,10 @@ function openPitTeam(num) {
         <a href="https://www.thebluealliance.com/team/${num}/2026" target="_blank" class="btn sm">TBA</a>
         <button class="btn sm danger" onclick="clearPitTeam(${num})">Clear</button>
       </div>
+    </div>
+    <div class="ps-field" style="margin-bottom:16px;">
+      <label>Robot Photo</label>
+      <div id="pit-photo-${num}">${photoSectionHtml(num, existingPhoto)}</div>
     </div>
     <div class="ps-field" style="margin-bottom:14px;">
       <label>Auto Paths / Notes on Autonomous</label>
@@ -1778,6 +1941,7 @@ document.querySelectorAll('.nb').forEach(btn=>{
     if(tab==='strategy')  updateStrat();
     if(tab==='videos')    renderVideos();
     if(tab==='pitscout')  { renderPitList(); renderPitSummary(); }
+    if(tab==='photos')    renderPhotosTab();
     if(tab==='setup')     { document.getElementById('tba-inp').value=tbaKey; document.getElementById('my-team-inp').value=myTeam||''; }
   });
 });
@@ -1803,7 +1967,16 @@ document.addEventListener('keydown', e=>{
 });
 
 // ─── INIT ─────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', ()=>{ tryLoadPit(); loadAll(); });
+window.addEventListener('DOMContentLoaded', ()=>{
+  tryLoadPit();
+  loadAll();
+  // Pre-fill sync fields and auto-start
+  const urlInp=document.getElementById('sync-url-inp');
+  const roomInp=document.getElementById('sync-room-inp');
+  if(urlInp) urlInp.value=syncUrl;
+  if(roomInp) roomInp.value=syncRoom;
+  enableSync();
+});
 </script>
 </body>
 </html>
