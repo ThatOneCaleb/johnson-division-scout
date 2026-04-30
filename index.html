@@ -484,7 +484,7 @@
         <div style="font-size:13px;font-weight:600;color:var(--tx);">Field Strategy Board</div>
         <a href="https://strategyboard.app/" target="_blank" class="btn sm">Open in new tab ↗</a>
       </div>
-      <iframe src="./strategy.html" style="width:100%;height:680px;border:1px solid var(--bd);border-radius:6px;display:block;" allow="fullscreen" title="Strategy Board"></iframe>
+      <iframe id="strat-iframe" src="./strategy.html" style="width:100%;height:680px;border:1px solid var(--bd);border-radius:6px;display:block;" allow="fullscreen" title="Strategy Board"></iframe>
     </div>
     <div id="strat-wrap"><div class="empty">Set up your alliance in the Alliance Builder tab first.</div></div>
   </div>
@@ -1009,6 +1009,9 @@ function filterSchedule() {
         <button onclick="loadMatchAlliance([${rKeys.map(n=>`'${n}'`).join(',')}],[${bKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:#ff7b72;border-right:1px solid var(--s3);">Load Red as My Alliance</button>
         <button onclick="loadMatchAlliance([${bKeys.map(n=>`'${n}'`).join(',')}],[${rKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:var(--blue);">Load Blue as My Alliance</button>
       </div>
+      <div style="border-top:1px solid var(--s3);">
+        <button onclick="openInStrategyBoard('Qual ${m.match_number}',[${rKeys.map(n=>`'${n}'`).join(',')}],[${bKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="width:100%;color:var(--tx2);">Open in Strategy Board ↗</button>
+      </div>
       <a class="mc-tba-link" href="https://www.thebluealliance.com/match/${m.key}" target="_blank">View on The Blue Alliance</a>
     </div>`;
   }).join('');
@@ -1386,6 +1389,17 @@ function renderCompare() {
   document.getElementById('cmp-body').innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
     <thead><tr><th style="background:var(--s2);padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);border:1px solid var(--bd);">Metric</th>${hdrs}</tr></thead>
     <tbody>${rows}</tbody></table></div>`;
+}
+
+function openInStrategyBoard(matchName, red, blue) {
+  document.querySelector('[data-tab="strategy"]').click();
+  const iframe = document.getElementById('strat-iframe');
+  const send = () => iframe.contentWindow.postMessage(
+    { type: 'open-strategy-match', matchName, red, blue }, '*'
+  );
+  // If iframe already loaded, send immediately; otherwise wait for load
+  try { iframe.contentWindow.document; send(); } catch(_) {}
+  iframe.addEventListener('load', send, { once: true });
 }
 
 function loadMatchAlliance(myKeys, oppKeys) {

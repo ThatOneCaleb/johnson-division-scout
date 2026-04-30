@@ -590,7 +590,49 @@
             });
         } catch (_) {}
 
-        // 4. Boot the app
+        // 4. Listen for "open match in whiteboard" messages from the parent scouting app
+        window.addEventListener('message', async e => {
+            if (!e.data || e.data.type !== 'open-strategy-match') return;
+            const { matchName, red, blue } = e.data;
+
+            // Wait until the app's New button exists (app may still be booting)
+            const waitFor = id => new Promise(res => {
+                const el = document.getElementById(id);
+                if (el) return res(el);
+                const obs = new MutationObserver(() => {
+                    const el2 = document.getElementById(id);
+                    if (el2) { obs.disconnect(); res(el2); }
+                });
+                obs.observe(document.body, { childList: true, subtree: true });
+            });
+
+            await waitFor('home-toolbar-new-btn');
+            await new Promise(r => setTimeout(r, 100));
+
+            // Open the create-match dialog
+            document.getElementById('home-toolbar-new-btn').click();
+            await new Promise(r => setTimeout(r, 80));
+
+            // Fill in the form
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = val;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+            set('create-match-name', matchName);
+            set('create-match-red-1',  red[0] || '');
+            set('create-match-red-2',  red[1] || '');
+            set('create-match-red-3',  red[2] || '');
+            set('create-match-blue-1', blue[0] || '');
+            set('create-match-blue-2', blue[1] || '');
+            set('create-match-blue-3', blue[2] || '');
+
+            await new Promise(r => setTimeout(r, 50));
+            document.getElementById('create-match-create-btn').click();
+        });
+
+        // 5. Boot the app
         try {
             await import('./assets/index-Dsejt33k.js');
             document.dispatchEvent(new Event('app:moduleloaded'));
