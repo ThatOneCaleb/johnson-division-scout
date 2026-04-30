@@ -202,6 +202,8 @@
     .my-team { color:var(--green); font-weight:700; }
     .mc-tba-link { font-size:11px; color:var(--blue); text-align:center; padding:6px; border-top:1px solid var(--s3); display:block; }
     .mc-tba-link:hover { background:var(--s2); text-decoration:none; }
+    .mc-ally-btn { flex:1; background:none; border:none; cursor:pointer; font-family:inherit; font-size:11px; font-weight:500; padding:6px 8px; transition:background .1s; }
+    .mc-ally-btn:hover { background:var(--s2); }
 
     /* Pick list */
     .pick-item { background:var(--s1); border:1px solid var(--bd); border-radius:6px; padding:10px 14px; margin-bottom:6px; display:flex; align-items:center; gap:12px; transition:background .1s; }
@@ -1003,6 +1005,10 @@ function filterSchedule() {
         <div class="mc-vs">vs</div>
         <div class="mc-teams mc-blue-side">${bKeys.map(n=>mkTeam(n)).join('<br>')}</div>
       </div>
+      <div style="display:flex;border-top:1px solid var(--s3);">
+        <button onclick="loadMatchAlliance([${rKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:#ff7b72;border-right:1px solid var(--s3);">Load Red as My Alliance</button>
+        <button onclick="loadMatchAlliance([${bKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:var(--blue);">Load Blue as My Alliance</button>
+      </div>
       <a class="mc-tba-link" href="https://www.thebluealliance.com/match/${m.key}" target="_blank">View on The Blue Alliance</a>
     </div>`;
   }).join('');
@@ -1380,6 +1386,11 @@ function renderCompare() {
   document.getElementById('cmp-body').innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
     <thead><tr><th style="background:var(--s2);padding:8px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);border:1px solid var(--bd);">Metric</th>${hdrs}</tr></thead>
     <tbody>${rows}</tbody></table></div>`;
+}
+
+function loadMatchAlliance(keys) {
+  allyT = keys.slice(0,3).map(k => parseInt(k)).map(n => teams.find(x=>x.team===n)||{team:n,name:`Team ${n}`,epa_mean:0,auto_epa:0,teleop_epa:0,endgame_epa:0});
+  document.querySelector('[data-tab="alliance"]').click();
 }
 
 // ─── ALLIANCE BUILDER ─────────────────────────────────────────
