@@ -1389,7 +1389,7 @@ function renderCompare() {
 }
 
 function loadMatchAlliance(keys) {
-  allyT = keys.slice(0,3).map(k => parseInt(k)).map(n => teams.find(x=>x.team===n)||{team:n,name:`Team ${n}`,epa_mean:0,auto_epa:0,teleop_epa:0,endgame_epa:0});
+  allyT = keys.slice(0,3).map(k => parseInt(k));
   document.querySelector('[data-tab="alliance"]').click();
 }
 
