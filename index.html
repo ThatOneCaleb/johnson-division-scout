@@ -480,11 +480,28 @@
   <!-- STRATEGY -->
   <div id="tab-strategy" class="tab">
     <div style="margin-bottom:20px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:600;color:var(--tx);">Field Strategy Board</div>
-        <a href="https://strategyboard.app/" target="_blank" class="btn sm">Open in new tab ↗</a>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-bottom:none;border-radius:6px 6px 0 0;flex-wrap:wrap;">
+        <span style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px;">Tool</span>
+        <button class="btn sm fsb-tool on" data-tool="move" onclick="FSB.setTool('move')">Move</button>
+        <button class="btn sm fsb-tool" data-tool="pen" onclick="FSB.setTool('pen')">Draw</button>
+        <button class="btn sm fsb-tool" data-tool="arrow" onclick="FSB.setTool('arrow')">Arrow</button>
+        <button class="btn sm fsb-tool" data-tool="erase" onclick="FSB.setTool('erase')">Erase</button>
+        <div style="width:1px;height:18px;background:var(--bd);margin:0 4px;"></div>
+        <div class="fsb-color" data-color="#58a6ff" onclick="FSB.setColor('#58a6ff')" style="width:17px;height:17px;border-radius:50%;background:#58a6ff;cursor:pointer;outline:2px solid #fff;outline-offset:2px;flex-shrink:0;"></div>
+        <div class="fsb-color" data-color="#f85149" onclick="FSB.setColor('#f85149')" style="width:17px;height:17px;border-radius:50%;background:#f85149;cursor:pointer;outline:2px solid transparent;outline-offset:2px;flex-shrink:0;"></div>
+        <div class="fsb-color" data-color="#3fb950" onclick="FSB.setColor('#3fb950')" style="width:17px;height:17px;border-radius:50%;background:#3fb950;cursor:pointer;outline:2px solid transparent;outline-offset:2px;flex-shrink:0;"></div>
+        <div class="fsb-color" data-color="#d29922" onclick="FSB.setColor('#d29922')" style="width:17px;height:17px;border-radius:50%;background:#d29922;cursor:pointer;outline:2px solid transparent;outline-offset:2px;flex-shrink:0;"></div>
+        <div class="fsb-color" data-color="#e6edf3" onclick="FSB.setColor('#e6edf3')" style="width:17px;height:17px;border-radius:50%;background:#e6edf3;cursor:pointer;outline:2px solid transparent;outline-offset:2px;flex-shrink:0;"></div>
+        <div class="fsb-color" data-color="#db6d28" onclick="FSB.setColor('#db6d28')" style="width:17px;height:17px;border-radius:50%;background:#db6d28;cursor:pointer;outline:2px solid transparent;outline-offset:2px;flex-shrink:0;"></div>
+        <button class="btn sm" onclick="FSB.clearDrawings()" style="margin-left:auto;">Clear</button>
+        <button class="btn sm" onclick="FSB.resetRobots()">Reset Robots</button>
+        <div id="fsb-sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--tx3);flex-shrink:0;margin-left:4px;" title="Sync status"></div>
       </div>
-      <iframe src="https://strategyboard.app/" style="width:100%;height:680px;border:1px solid var(--bd);border-radius:6px;display:block;" allow="fullscreen" title="Strategy Board"></iframe>
+      <div id="fsb-container" style="position:relative;width:100%;height:450px;background:#152015;border:1px solid var(--bd);border-radius:0 0 6px 6px;overflow:hidden;touch-action:none;">
+        <canvas id="fsb-field"  style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
+        <canvas id="fsb-draw"   style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
+        <canvas id="fsb-robots" style="position:absolute;top:0;left:0;width:100%;height:100%;cursor:default;"></canvas>
+      </div>
     </div>
     <div id="strat-wrap"><div class="empty">Set up your alliance in the Alliance Builder tab first.</div></div>
   </div>
@@ -559,7 +576,7 @@
       <div class="gr">
         <div class="rc"><h4>FUEL</h4><p>5.91" foam ball into active HUB (41.7" hex at 72"). <span class="v">1 pt</span> per FUEL in active HUB. Inactive HUB = 0 during shifts.</p></div>
         <div class="rc"><h4>TOWER Climb</h4><p>L1: <span class="v">15 auto / 10 teleop</span><br>L2: <span class="v">20 pts teleop</span><br>L3: <span class="v">30 pts teleop</span><br>Max 2 robots on tower.</p></div>
-        <div class="rc"><h4>Ranking Points</h4><p>Win: <span class="v">3 RP</span> &nbsp; Tie: <span class="v">1 RP</span><br>ENERGIZED: <span class="v">100+ FUEL</span><br>SUPERCHARGED: <span class="v">360+ FUEL</span><br>TRAVERSAL: <span class="v">50+ tower pts</span></p></div>
+        <div class="rc"><h4>Ranking Points</h4><p>Win: <span class="v">3 RP</span> &nbsp; Tie: <span class="v">1 RP</span><br>ENERGIZED: <span class="v">360+ FUEL</span><br>SUPERCHARGED: <span class="v">500+ FUEL</span><br>TRAVERSAL: <span class="v">50+ tower pts</span></p></div>
         <div class="rc"><h4>HUB Shifts</h4><p>4 × 25s shifts. Auto FUEL winner controls their HUB. Both HUBs active in auto (20s), transition (10s), endgame (30s).</p></div>
         <div class="rc"><h4>Obstacles</h4><p>BUMP: 6.5" tall — drive over.<br>TRENCH: 40.25" tall — drive under.</p></div>
         <div class="rc"><h4>Climb Combos</h4><p>L3+L3 = <span class="v">60 pts</span> ✓<br>L3+L2 = <span class="v">50 pts</span> ✓ (TRAVERSAL)<br>L3+L1 = <span class="v">40 pts</span> ✗<br>L2+L2 = <span class="v">40 pts</span> ✗</p></div>
@@ -1314,7 +1331,7 @@ async function loadDetail(num,t) {
     <div class="sec">
       <div class="sh">Est. RP Rates</div>
       <table class="st">
-        <tr><td>ENERGIZED (100+ fuel/match)</td><td>${tagHtml(pct(energized),energized>.75?'tg':energized>.4?'ty':'tr')}</td></tr>
+        <tr><td>ENERGIZED (360+ fuel/match)</td><td>${tagHtml(pct(energized),energized>.75?'tg':energized>.4?'ty':'tr')}</td></tr>
         <tr><td>TRAVERSAL (50+ tower pts)</td><td>${tagHtml(pct(traversal),traversal>.75?'tg':traversal>.4?'ty':'tr')}</td></tr>
       </table>
       <p style="font-size:11px;color:var(--tx3);margin-top:7px;">Estimated from this team's EPA. Actual rates depend on full alliance composition.</p>
@@ -1418,7 +1435,7 @@ function lookupOpp(inp,i){
     oppT[i]=t;
     document.getElementById(`oi-${i}`).textContent=`${esc(t.name)}  ·  EPA ${f1(t.epa_mean)}`;
   }
-  updatePreds(); updateStrat();}
+  updatePreds(); updateStrat(); FSB.updateRobotLabels();}
 
 function renderAlliance(){
   [0,1,2].forEach(i=>{
@@ -1427,7 +1444,7 @@ function renderAlliance(){
     if(t){ el.innerHTML=`<div class="rsl">Robot ${i+1}</div><button class="rmv" onclick="removeAlly(${i})">×</button><div class="rn">${t.team}</div><div class="rnm">${esc(t.name)}</div><div class="rst"><span>EPA ${f1(t.epa_mean)}</span><span>Auto ${f1(t.auto_epa)}</span><span>Climb ${f1(t.endgame_epa)}</span></div>`; }
     else { el.innerHTML=`<div class="rsl">Robot ${i+1}</div><div class="re">Use "+Ally" from Teams tab</div>`; }
   });
-  updatePreds(); updateStrat();}
+  updatePreds(); updateStrat(); FSB.updateRobotLabels();}
 
 // ─── REBUILT 2026 SCORE MODEL ─────────────────────────────────
 // Calibrated on 476 alliance-match observations (Rocket City, Denver, Las Vegas regionals)
@@ -1441,7 +1458,7 @@ function renderAlliance(){
 //     hub state is tracked; teams are 97.4% efficient at avoiding inactive hub)
 //   • +5.1: expected pts from opponent fouls (mean from real data)
 // RP thresholds from real achievement rates:
-//   ENERGIZED ≥100 fuel: 72.7% of alliances | SUPERCHARGED ≥360: 6.5% | TRAVERSAL ≥50 tower: 0.4%
+//   ENERGIZED ≥360 fuel (worlds) | SUPERCHARGED ≥500 fuel (worlds) | TRAVERSAL ≥50 tower: 0.4%
 function calcPred(nums){
   const allPool=[...teams,...oppT.filter(Boolean)];
   const members=nums.filter(Boolean).map(n=>allPool.find(t=>t.team===n)).filter(Boolean);
@@ -2126,7 +2143,8 @@ document.querySelectorAll('.nb').forEach(btn=>{
     if(tab==='picklist')  renderPickList();
     if(tab==='compare')   renderCompare();
     if(tab==='alliance')  renderAlliance();
-    if(tab==='strategy')  updateStrat();
+    if(tab==='strategy')  { FSB.init(); FSB.updateRobotLabels(); FSB.startSync(); updateStrat(); }
+    else FSB.stopSync();
     if(tab==='videos')    renderVideos();
     if(tab==='pitscout')  { renderPitList(); renderPitSummary(); }
     if(tab==='photos')    renderPhotosTab();
@@ -2153,6 +2171,268 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape') closePanel();
 });
+
+// ─── FIELD STRATEGY BOARD ─────────────────────────────────────
+const FSB = (() => {
+  const LW=800,LH=390;
+  let cF,cD,cR,xF,xD,xR,inited=false;
+  let tool='move',penColor='#58a6ff';
+  let strokes=[],arrows=[],curStroke=null;
+  let arrowStart=null,lastPos=null,isDown=false;
+  let dragging=null,dragOx=0,dragOy=0;
+  let syncTimer=null,lastSyncTs=0,syncing=false;
+
+  const robots=[
+    {i:0,al:'red', label:'R1',lx:55, ly:115},
+    {i:1,al:'red', label:'R2',lx:55, ly:195},
+    {i:2,al:'red', label:'R3',lx:55, ly:275},
+    {i:3,al:'blue',label:'B1',lx:745,ly:115},
+    {i:4,al:'blue',label:'B2',lx:745,ly:195},
+    {i:5,al:'blue',label:'B3',lx:745,ly:275},
+  ];
+
+  /* ── sync helpers ── */
+  function syncBase(){
+    if(!syncUrl||!syncRoom) return null;
+    return `${syncUrl}/jdscout/${encodeURIComponent(syncRoom)}/stratboard`;
+  }
+  function setSyncDot(state){ // 'ok','busy','off'
+    const d=document.getElementById('fsb-sync-dot');
+    if(!d) return;
+    d.style.background=state==='ok'?'var(--green)':state==='busy'?'var(--ylw)':'var(--tx3)';
+    d.title=state==='ok'?'Synced':state==='busy'?'Syncing…':'Sync off';
+  }
+  function compressStroke(s){
+    const pts=[];let last=null;
+    s.pts.forEach(p=>{
+      const x=Math.round(p.x),y=Math.round(p.y);
+      if(!last||Math.hypot(x-last[0],y-last[1])>=4){pts.push([x,y]);last=[x,y];}
+    });
+    return {t:s.type,p:pts,c:s.color};
+  }
+  function decompressStroke(cs){
+    return {type:cs.t,pts:cs.p.map(([x,y])=>({x,y})),color:cs.c};
+  }
+  function getState(){
+    return {
+      robots:robots.map(r=>({x:Math.round(r.lx),y:Math.round(r.ly)})),
+      strokes:strokes.slice(-40).map(compressStroke),
+      arrows:arrows.slice(-20).map(a=>({x1:Math.round(a.x1),y1:Math.round(a.y1),x2:Math.round(a.x2),y2:Math.round(a.y2),c:a.color})),
+      _ts:Date.now()
+    };
+  }
+  function applyState(st){
+    if(!st||st._ts<=lastSyncTs) return;
+    lastSyncTs=st._ts;
+    if(st.robots) st.robots.forEach((r,i)=>{if(robots[i]){robots[i].lx=r.x;robots[i].ly=r.y;}});
+    if(st.strokes) strokes=st.strokes.map(decompressStroke);
+    if(st.arrows)  arrows=st.arrows.map(a=>({x1:a.x1,y1:a.y1,x2:a.x2,y2:a.y2,color:a.c}));
+    renderDrawings(false); renderRobots();
+  }
+  async function fsbPush(){
+    const base=syncBase(); if(!base) return;
+    setSyncDot('busy');
+    try{
+      const st=getState(); lastSyncTs=st._ts;
+      await fetch(`${base}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(st)});
+      setSyncDot('ok');
+    }catch(e){setSyncDot('off');}
+  }
+  async function fsbPull(){
+    const base=syncBase(); if(!base) return;
+    try{
+      const r=await fetch(`${base}.json`);
+      if(!r.ok) return;
+      const st=await r.json();
+      applyState(st);
+      setSyncDot('ok');
+    }catch(e){setSyncDot('off');}
+  }
+  function startSync(){
+    if(syncTimer) return;
+    fsbPull();
+    syncTimer=setInterval(fsbPull,3500);
+    setSyncDot('ok');
+  }
+  function stopSync(){
+    if(syncTimer){clearInterval(syncTimer);syncTimer=null;}
+    setSyncDot('off');
+  }
+
+  /* ── field drawing ── */
+  function drawField(){
+    const c=xF; c.clearRect(0,0,LW,LH);
+    c.fillStyle='#162716'; c.fillRect(0,0,LW,LH);
+    c.strokeStyle='rgba(255,255,255,0.035)'; c.lineWidth=0.5;
+    for(let x=0;x<=LW;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,LH);c.stroke();}
+    for(let y=0;y<=LH;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(LW,y);c.stroke();}
+    c.fillStyle='rgba(248,81,73,0.13)'; c.fillRect(0,0,120,LH);
+    c.fillStyle='rgba(88,166,255,0.13)'; c.fillRect(680,0,120,LH);
+    c.setLineDash([6,5]); c.strokeStyle='rgba(255,255,255,0.28)'; c.lineWidth=1.2;
+    c.beginPath();c.moveTo(215,0);c.lineTo(215,LH);c.stroke();
+    c.beginPath();c.moveTo(585,0);c.lineTo(585,LH);c.stroke();
+    c.setLineDash([3,5]); c.strokeStyle='rgba(255,255,255,0.12)'; c.lineWidth=0.8;
+    c.beginPath();c.moveTo(400,0);c.lineTo(400,LH);c.stroke();
+    c.setLineDash([]);
+    c.save(); c.translate(400,195);
+    c.beginPath();
+    for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/8;c.lineTo(60*Math.cos(a),60*Math.sin(a));}
+    c.closePath();
+    c.fillStyle='rgba(200,175,80,0.18)'; c.fill();
+    c.strokeStyle='rgba(210,185,60,0.75)'; c.lineWidth=2; c.stroke();
+    c.fillStyle='rgba(220,195,100,0.75)'; c.font='bold 11px IBM Plex Mono,monospace';
+    c.textAlign='center'; c.textBaseline='middle'; c.fillText('HUB',0,0);
+    c.restore();
+    function rung(x,col){
+      c.strokeStyle=col; c.lineWidth=2.5;
+      c.beginPath();c.moveTo(x,72);c.lineTo(x,318);c.stroke();
+      [[0.22,'L1'],[0.5,'L2'],[0.78,'L3']].forEach(([t,lbl])=>{
+        const y=72+(318-72)*t;
+        c.lineWidth=2;c.beginPath();c.moveTo(x-14,y);c.lineTo(x+14,y);c.stroke();
+        c.font='7px IBM Plex Mono,monospace';c.fillStyle=col;
+        c.textAlign='center';c.textBaseline='bottom';c.fillText(lbl,x,y-2);
+      });
+    }
+    rung(115,'rgba(248,81,73,0.75)'); rung(685,'rgba(88,166,255,0.75)');
+    c.font='8px IBM Plex Mono,monospace'; c.textBaseline='middle';
+    [['rgba(248,81,73,0.5)',120,'left'],['rgba(88,166,255,0.5)',680,'right']].forEach(([col,x,a])=>{
+      c.fillStyle=col; c.textAlign=a;
+      c.fillText('DEPOT',x+(a==='left'?3:-3),78);
+      c.fillText('CENTER',x+(a==='left'?3:-3),195);
+      c.fillText('OUTPOST',x+(a==='left'?3:-3),312);
+    });
+    function ls(x,col){
+      c.fillStyle=col.replace('0.75','0.12'); c.strokeStyle=col; c.lineWidth=1;
+      c.beginPath(); c.roundRect?c.roundRect(x,2,95,60,3):c.rect(x,2,95,60);
+      c.fill(); c.stroke();
+      c.font='8px IBM Plex Mono,monospace';c.textAlign='center';c.textBaseline='middle';c.fillStyle=col;c.fillText('LOAD',x+47,32);
+    }
+    ls(3,'rgba(248,81,73,0.75)'); ls(702,'rgba(88,166,255,0.75)');
+    c.font='8px IBM Plex Mono,monospace';c.textAlign='center';c.textBaseline='bottom';
+    c.fillStyle='rgba(255,255,255,0.2)';c.fillText('AUTO LINE',162,LH-4);c.fillText('AUTO LINE',638,LH-4);
+    c.strokeStyle='rgba(255,255,255,0.75)';c.lineWidth=3;c.strokeRect(1.5,1.5,LW-3,LH-3);
+    c.font='bold 10px IBM Plex Mono,monospace';c.textBaseline='bottom';
+    c.fillStyle='rgba(248,81,73,0.55)';c.textAlign='center';c.fillText('RED',60,LH-2);
+    c.fillStyle='rgba(88,166,255,0.55)';c.fillText('BLUE',740,LH-2);
+  }
+
+  function drawArrowShape(ctx,x1,y1,x2,y2,col){
+    const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy); if(len<4) return;
+    const a=Math.atan2(dy,dx),hl=Math.min(18,len*.4);
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2.5;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-hl*Math.cos(a-Math.PI/6),y2-hl*Math.sin(a-Math.PI/6));
+    ctx.lineTo(x2-hl*Math.cos(a+Math.PI/6),y2-hl*Math.sin(a+Math.PI/6));
+    ctx.closePath();ctx.fill();
+  }
+
+  function renderDrawings(preview){
+    xD.clearRect(0,0,LW,LH);
+    const all=preview&&curStroke?[...strokes,curStroke]:strokes;
+    all.forEach(s=>{
+      if(s.pts.length<2) return;
+      xD.globalCompositeOperation=s.type==='erase'?'destination-out':'source-over';
+      xD.strokeStyle=s.type==='erase'?'rgba(0,0,0,1)':s.color;
+      xD.lineWidth=s.type==='erase'?22:3;
+      xD.lineCap='round';xD.lineJoin='round';
+      xD.beginPath();xD.moveTo(s.pts[0].x,s.pts[0].y);
+      s.pts.slice(1).forEach(p=>xD.lineTo(p.x,p.y));xD.stroke();
+    });
+    xD.globalCompositeOperation='source-over';
+    arrows.forEach(a=>drawArrowShape(xD,a.x1,a.y1,a.x2,a.y2,a.color));
+    if(preview&&arrowStart&&lastPos) drawArrowShape(xD,arrowStart.x,arrowStart.y,lastPos.x,lastPos.y,penColor);
+  }
+
+  function renderRobots(){
+    xR.clearRect(0,0,LW,LH);
+    robots.forEach(r=>{
+      const R=18,red=r.al==='red';
+      xR.shadowBlur=10;xR.shadowColor=red?'rgba(248,81,73,.5)':'rgba(88,166,255,.5)';
+      xR.beginPath();xR.arc(r.lx,r.ly,R,0,Math.PI*2);
+      xR.fillStyle=red?'#8b1a1a':'#1a3a6b';xR.fill();
+      xR.strokeStyle=red?'#f85149':'#58a6ff';xR.lineWidth=2;xR.stroke();
+      xR.shadowBlur=0;xR.fillStyle='#fff';
+      xR.font=`bold ${r.label.length>4?'7.5':'9'}px IBM Plex Mono,monospace`;
+      xR.textAlign='center';xR.textBaseline='middle';
+      xR.fillText(r.label.slice(0,5),r.lx,r.ly);
+    });
+  }
+
+  function ePos(e){
+    const rect=cR.getBoundingClientRect(),s=e.touches?e.touches[0]:e;
+    return {x:(s.clientX-rect.left)*LW/rect.width,y:(s.clientY-rect.top)*LH/rect.height};
+  }
+  function hitRobot(x,y){
+    for(let i=robots.length-1;i>=0;i--) if(Math.hypot(robots[i].lx-x,robots[i].ly-y)<20) return robots[i];
+    return null;
+  }
+  function onDown(e){e.preventDefault();isDown=true;const p=ePos(e);lastPos=p;
+    if(tool==='move'){const r=hitRobot(p.x,p.y);if(r){dragging=r;dragOx=p.x-r.lx;dragOy=p.y-r.ly;cR.style.cursor='grabbing';}}
+    else if(tool==='pen'||tool==='erase') curStroke={type:tool,pts:[{x:p.x,y:p.y}],color:penColor};
+    else if(tool==='arrow') arrowStart={x:p.x,y:p.y};
+  }
+  function onMove(e){e.preventDefault();if(!isDown) return;const p=ePos(e);lastPos=p;
+    if(tool==='move'&&dragging){dragging.lx=Math.max(18,Math.min(LW-18,p.x-dragOx));dragging.ly=Math.max(18,Math.min(LH-18,p.y-dragOy));renderRobots();}
+    else if((tool==='pen'||tool==='erase')&&curStroke){curStroke.pts.push({x:p.x,y:p.y});renderDrawings(true);}
+    else if(tool==='arrow'&&arrowStart) renderDrawings(true);
+  }
+  function onUp(e){e.preventDefault();isDown=false;
+    if(dragging){dragging=null;cR.style.cursor='default';fsbPush();}
+    else if((tool==='pen'||tool==='erase')&&curStroke){if(curStroke.pts.length>=2)strokes.push(curStroke);curStroke=null;renderDrawings(false);fsbPush();}
+    else if(tool==='arrow'&&arrowStart&&lastPos){arrows.push({x1:arrowStart.x,y1:arrowStart.y,x2:lastPos.x,y2:lastPos.y,color:penColor});arrowStart=null;renderDrawings(false);fsbPush();}
+  }
+
+  function resize(){
+    const cont=document.getElementById('fsb-container');if(!cont||!cF) return;
+    const W=cont.clientWidth,H=cont.clientHeight,dpr=window.devicePixelRatio||1;
+    [cF,cD,cR].forEach(c=>{c.width=W*dpr;c.height=H*dpr;c.style.width=W+'px';c.style.height=H+'px';});
+    [xF,xD,xR].forEach(x=>x.setTransform(dpr*W/LW,0,0,dpr*H/LH,0,0));
+    drawField();renderDrawings(false);renderRobots();
+  }
+
+  function init(){
+    if(inited) return;
+    cF=document.getElementById('fsb-field');
+    cD=document.getElementById('fsb-draw');
+    cR=document.getElementById('fsb-robots');
+    if(!cF) return;
+    inited=true;
+    xF=cF.getContext('2d');xD=cD.getContext('2d');xR=cR.getContext('2d');
+    cR.addEventListener('mousedown',onDown,{passive:false});
+    cR.addEventListener('mousemove',onMove,{passive:false});
+    cR.addEventListener('mouseup',onUp,{passive:false});
+    cR.addEventListener('mouseleave',onUp,{passive:false});
+    cR.addEventListener('touchstart',onDown,{passive:false});
+    cR.addEventListener('touchmove',onMove,{passive:false});
+    cR.addEventListener('touchend',onUp,{passive:false});
+    new ResizeObserver(resize).observe(document.getElementById('fsb-container'));
+    updateRobotLabels();
+  }
+
+  function updateRobotLabels(){
+    const a=(allyT||[]).filter(Boolean),o=(oppT||[]).filter(Boolean);
+    [0,1,2].forEach(i=>{robots[i].label=a[i]?String(teams.find(x=>x.team===a[i])?.team||a[i]):`R${i+1}`;});
+    [0,1,2].forEach(i=>{robots[i+3].label=o[i]?String(o[i].team||o[i]):`B${i+1}`;});
+    if(xR) renderRobots();
+  }
+  function setTool(t){
+    tool=t;
+    document.querySelectorAll('.fsb-tool').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
+    if(cR) cR.style.cursor=t==='move'?'default':'crosshair';
+  }
+  function setColor(c){
+    penColor=c;
+    document.querySelectorAll('.fsb-color').forEach(el=>{el.style.outline=el.dataset.color===c?'2px solid #fff':'2px solid transparent';});
+  }
+  function clearDrawings(){strokes=[];arrows=[];arrowStart=null;curStroke=null;if(xD)renderDrawings(false);fsbPush();}
+  function resetRobots(){
+    [[55,115],[55,195],[55,275],[745,115],[745,195],[745,275]].forEach(([x,y],i)=>{robots[i].lx=x;robots[i].ly=y;});
+    updateRobotLabels();fsbPush();
+  }
+
+  return {init,setTool,setColor,clearDrawings,resetRobots,updateRobotLabels,startSync,stopSync};
+})();
 
 // ─── INIT ─────────────────────────────────────────────────────
 
