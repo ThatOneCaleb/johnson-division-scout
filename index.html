@@ -1461,31 +1461,37 @@ function calcPred(nums){
   const members=nums.filter(Boolean).map(n=>allPool.find(t=>t.team===n)).filter(Boolean);
   if(!members.length) return null;
   const sum=k=>members.reduce((s,t)=>s+(t[k]||0),0);
-  const aE=sum('auto_epa'), teE=sum('teleop_epa'), eE=sum('endgame_epa');
+  let aE=sum('auto_epa'), teE=sum('teleop_epa'), eE=sum('endgame_epa');
+  const totalE=sum('epa_mean');
 
-  // Apply researched coefficients
+  // Statbotics often lacks sub-EPA breakdowns for current season — fall back to
+  // distributing total EPA using typical REEFSCAPE 2026 Worlds ratios (auto 25%, teleop 55%, endgame 20%)
+  if(aE===0 && teE===0 && eE===0 && totalE>0){
+    aE  = totalE * 0.25;
+    teE = totalE * 0.55;
+    eE  = totalE * 0.20;
+  }
+
   const autoScore    = 1.237 * aE;
   const teleopScore  = teE;
   const endgameScore = eE;
   const foulBonus    = 5.1;
   const total        = autoScore + teleopScore + endgameScore + foulBonus;
 
-  // Fuel total for RP prediction (exclude expected tower pts from endgame)
+  // Fuel total for RP prediction (exclude expected barge pts from endgame)
   const cl=members.map(t=>t.endgame_epa>=28?3:t.endgame_epa>=18?2:t.endgame_epa>=8?1:0);
   const towerPts=cl.reduce((s,l)=>s+[0,10,20,30][l],0);
   const totalFuel = autoScore + teleopScore + Math.max(0, endgameScore - towerPts);
 
-  // RP probability curves calibrated to real achievement rates
-  // ENERGIZED: 72.7% hit ≥100 → sigmoid centred well below median
-  const eP = clamp(1/(1+Math.exp(-(totalFuel-80)/30)), 0, .99);
-  // SUPERCHARGED: 6.5% hit ≥360 → steep sigmoid around 340
-  const sP = clamp(1/(1+Math.exp(-(totalFuel-310)/55)), 0, .99);
-  // TRAVERSAL: 0.4% → nearly always false in current meta
+  // RP probability curves — Worlds thresholds: ENERGIZED ≥360, SUPERCHARGED ≥500
+  const eP = clamp(1/(1+Math.exp(-(totalFuel-360)/45)), 0, .99);
+  const sP = clamp(1/(1+Math.exp(-(totalFuel-500)/55)), 0, .99);
   const tP = clamp((towerPts-20)/40, 0, .99);
 
   return {
     members, total, auto:autoScore, teleop:teleopScore, endgame:endgameScore,
     fuel:totalFuel, climbLevels:cl, towerPts, eP, sP, tP,
+    usingEstimate: aE===totalE*0.25,
   };
 }
 
@@ -1494,24 +1500,24 @@ function predHtml(p,color){
   const te=p.eP>.75?'tg':p.eP>.4?'ty':'tr';
   const ts=p.sP>.6?'tg':p.sP>.2?'ty':'tr';
   const tt=p.tP>.5?'tg':p.tP>.15?'ty':'tr';
-  // Score context from real data: median=168, p75=258, p90=346
-  const pctile = p.total<98?'bottom 25%':p.total<168?'below median':p.total<258?'above median (p50–75)':p.total<346?'top 25% (p75–90)':'top 10%';
+  const pctile = p.total<200?'below median':p.total<280?'near median':p.total<360?'above median':p.total<440?'top 25%':'top 10%';
+  const estimateNote = p.usingEstimate ? `<div style="margin-top:4px;font-size:10px;color:var(--tx3);opacity:.8;">⚠ Sub-EPA breakdown not yet in Statbotics — using estimated split (25/55/20%)</div>` : '';
   return `<div class="pred" style="border-top:2px solid ${color};">
     <div class="pred-lbl">Predicted Alliance Score</div>
     <div class="pred-score" style="color:${color}">${f0(p.total)}</div>
-    <div style="font-size:10px;color:var(--tx3);margin-top:2px;margin-bottom:8px;">${pctile} · div median 168 · p90 346</div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:2px;margin-bottom:8px;">${pctile} · Worlds 2026</div>
+    ${estimateNote}
     <div class="pred-phases">
       <div class="pp"><div class="pp-v" style="color:#79c0ff">${f0(p.auto)}</div><div class="pp-l">Auto ×1.237</div></div>
       <div class="pp"><div class="pp-v" style="color:var(--green)">${f0(p.teleop)}</div><div class="pp-l">Teleop</div></div>
       <div class="pp"><div class="pp-v" style="color:var(--org)">${f0(p.endgame)}</div><div class="pp-l">Endgame</div></div>
     </div>
     <div class="rp-row">
-      <div class="rpi"><div class="rpi-l">ENERGIZED <span style="opacity:.5;font-size:9px;">72.7%avg</span></div><div class="rpi-v">${tagHtml(pct(p.eP),te)}</div></div>
-      <div class="rpi"><div class="rpi-l">SUPERCHARGED <span style="opacity:.5;font-size:9px;">6.5%avg</span></div><div class="rpi-v">${tagHtml(pct(p.sP),ts)}</div></div>
-      <div class="rpi"><div class="rpi-l">TRAVERSAL <span style="opacity:.5;font-size:9px;">0.4%avg</span></div><div class="rpi-v">${tagHtml(pct(p.tP),tt)}</div></div>
+      <div class="rpi"><div class="rpi-l">ENERGIZED <span style="opacity:.5;font-size:9px;">≥360 fuel</span></div><div class="rpi-v">${tagHtml(pct(p.eP),te)}</div></div>
+      <div class="rpi"><div class="rpi-l">SUPERCHARGED <span style="opacity:.5;font-size:9px;">≥500 fuel</span></div><div class="rpi-v">${tagHtml(pct(p.sP),ts)}</div></div>
+      <div class="rpi"><div class="rpi-l">TRAVERSAL <span style="opacity:.5;font-size:9px;">barge hang</span></div><div class="rpi-v">${tagHtml(pct(p.tP),tt)}</div></div>
     </div>
-    <div style="margin-top:8px;font-size:10px;color:var(--tx3);">Climb: ${p.members.map((t,i)=>`${t.team}→${p.climbLevels[i]>0?'L'+p.climbLevels[i]:'L0'}`).join(' · ')} · Tower ${p.towerPts}pts</div>
-    <div style="margin-top:3px;font-size:10px;color:var(--tx3);opacity:.7;">Formula: 1.237×auto + teleop + endgame + 5.1 fouls · calibrated on 476 real matches</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--tx3);">Climb: ${p.members.map((t,i)=>`${t.team}→${p.climbLevels[i]>0?'L'+p.climbLevels[i]:'L0'}`).join(' · ')} · Barge ${p.towerPts}pts</div>
   </div>`;
 }
 
