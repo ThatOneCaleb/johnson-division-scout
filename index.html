@@ -468,9 +468,9 @@
       </div>
       <div>
         <div class="ab-lbl" style="color:var(--red)">Opponent Alliance</div>
-        <div class="rs bt-r" style="margin-bottom:8px;"><div class="rsl">Opponent 1</div><input class="inp" style="width:100%;margin-top:5px;" placeholder="Team number" oninput="lookupOpp(this,0)"><div id="oi-0" style="font-size:11px;color:var(--tx3);margin-top:3px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div></div>
-        <div class="rs bt-r" style="margin-bottom:8px;"><div class="rsl">Opponent 2</div><input class="inp" style="width:100%;margin-top:5px;" placeholder="Team number" oninput="lookupOpp(this,1)"><div id="oi-1" style="font-size:11px;color:var(--tx3);margin-top:3px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div></div>
-        <div class="rs bt-r" style="margin-bottom:8px;"><div class="rsl">Opponent 3</div><input class="inp" style="width:100%;margin-top:5px;" placeholder="Team number" oninput="lookupOpp(this,2)"><div id="oi-2" style="font-size:11px;color:var(--tx3);margin-top:3px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div></div>
+        <div class="rs bt-r" style="margin-bottom:8px;"><div class="rsl">Opponent 1</div><input id="opp-inp-0" class="inp" style="width:100%;margin-top:5px;" placeholder="Team number" oninput="lookupOpp(this,0)"><div id="oi-0" style="font-size:11px;color:var(--tx3);margin-top:3px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div></div>
+        <div class="rs bt-r" style="margin-bottom:8px;"><div class="rsl">Opponent 2</div><input id="opp-inp-1" class="inp" style="width:100%;margin-top:5px;" placeholder="Team number" oninput="lookupOpp(this,1)"><div id="oi-1" style="font-size:11px;color:var(--tx3);margin-top:3px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div></div>
+        <div class="rs bt-r" style="margin-bottom:8px;"><div class="rsl">Opponent 3</div><input id="opp-inp-2" class="inp" style="width:100%;margin-top:5px;" placeholder="Team number" oninput="lookupOpp(this,2)"><div id="oi-2" style="font-size:11px;color:var(--tx3);margin-top:3px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div></div>
         <div id="opp-pred"></div>
       </div>
     </div>
@@ -1006,8 +1006,8 @@ function filterSchedule() {
         <div class="mc-teams mc-blue-side">${bKeys.map(n=>mkTeam(n)).join('<br>')}</div>
       </div>
       <div style="display:flex;border-top:1px solid var(--s3);">
-        <button onclick="loadMatchAlliance([${rKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:#ff7b72;border-right:1px solid var(--s3);">Load Red as My Alliance</button>
-        <button onclick="loadMatchAlliance([${bKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:var(--blue);">Load Blue as My Alliance</button>
+        <button onclick="loadMatchAlliance([${rKeys.map(n=>`'${n}'`).join(',')}],[${bKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:#ff7b72;border-right:1px solid var(--s3);">Load Red as My Alliance</button>
+        <button onclick="loadMatchAlliance([${bKeys.map(n=>`'${n}'`).join(',')}],[${rKeys.map(n=>`'${n}'`).join(',')}])" class="mc-ally-btn" style="color:var(--blue);">Load Blue as My Alliance</button>
       </div>
       <a class="mc-tba-link" href="https://www.thebluealliance.com/match/${m.key}" target="_blank">View on The Blue Alliance</a>
     </div>`;
@@ -1388,8 +1388,16 @@ function renderCompare() {
     <tbody>${rows}</tbody></table></div>`;
 }
 
-function loadMatchAlliance(keys) {
-  allyT = keys.slice(0,3).map(k => parseInt(k));
+function loadMatchAlliance(myKeys, oppKeys) {
+  allyT = myKeys.slice(0,3).map(k => parseInt(k));
+  oppKeys.slice(0,3).forEach((k,i) => {
+    const n = parseInt(k);
+    const t = teams.find(x=>x.team===n)||{team:n,name:`Team ${n}`,epa_mean:0,auto_epa:0,teleop_epa:0,endgame_epa:0,wins:0,losses:0,ties:0};
+    oppT[i] = t;
+    const inp = document.getElementById(`opp-inp-${i}`);
+    if(inp) inp.value = n;
+    document.getElementById(`oi-${i}`).textContent = `${esc(t.name)}  ·  EPA ${f1(t.epa_mean)}`;
+  });
   document.querySelector('[data-tab="alliance"]').click();
 }
 
